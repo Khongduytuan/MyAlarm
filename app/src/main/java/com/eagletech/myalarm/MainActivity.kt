@@ -1,5 +1,6 @@
 package com.eagletech.myalarm
 
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
@@ -13,12 +14,14 @@ import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         val timePicker: TimePicker = findViewById(R.id.timePicker)
         val setAlarmButton: Button = findViewById(R.id.setAlarmButton)
+        val stopButton: Button = findViewById(R.id.stopButton)
 
         setAlarmButton.setOnClickListener {
             val calendar = Calendar.getInstance()
@@ -33,6 +36,11 @@ class MainActivity : AppCompatActivity() {
 
             setAlarm(calendar.timeInMillis)
         }
+
+        stopButton.setOnClickListener {
+            stopAlarm()
+            Toast.makeText(this, "Alarm stopped!", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setAlarm(timeInMillis: Long) {
@@ -43,5 +51,13 @@ class MainActivity : AppCompatActivity() {
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
 
         Toast.makeText(this, "Alarm set!", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopAlarm() {
+        val intent = Intent(this, AlarmReceiver::class.java).apply {
+            action = "com.eagletech.myalarm.ACTION_STOP_ALARM"
+        }
+        val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+        sendBroadcast(intent)
     }
 }
