@@ -7,39 +7,93 @@ import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.TimePicker
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import com.eagletech.myalarm.appData.MyData
+import com.eagletech.myalarm.databinding.ActivityMainBinding
 import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var myData: MyData
+
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        myData = MyData.getInstance(this)
+        funUI()
 
-        val timePicker: TimePicker = findViewById(R.id.timePicker)
-        val setAlarmButton: Button = findViewById(R.id.setAlarmButton)
-        val stopButton: Button = findViewById(R.id.stopButton)
+        binding.setAlarmButton.setOnClickListener {
+            if (myData.isPremiumSaves == true){
+                val calendar = Calendar.getInstance()
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    calendar.set(Calendar.HOUR_OF_DAY, binding.timePicker.hour)
+                    calendar.set(Calendar.MINUTE, binding.timePicker.minute)
+                } else {
+                    calendar.set(Calendar.HOUR_OF_DAY, binding.timePicker.currentHour)
+                    calendar.set(Calendar.MINUTE, binding.timePicker.currentMinute)
+                }
+                calendar.set(Calendar.SECOND, 0)
 
-        setAlarmButton.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                calendar.set(Calendar.HOUR_OF_DAY, timePicker.hour)
-                calendar.set(Calendar.MINUTE, timePicker.minute)
-            } else {
-                calendar.set(Calendar.HOUR_OF_DAY, timePicker.currentHour)
-                calendar.set(Calendar.MINUTE, timePicker.currentMinute)
+                setAlarm(calendar.timeInMillis)
+            } else if (myData.getSaves() > 0){
+                val calendar = Calendar.getInstance()
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                    calendar.set(Calendar.HOUR_OF_DAY, binding.timePicker.hour)
+                    calendar.set(Calendar.MINUTE, binding.timePicker.minute)
+                } else {
+                    calendar.set(Calendar.HOUR_OF_DAY, binding.timePicker.currentHour)
+                    calendar.set(Calendar.MINUTE, binding.timePicker.currentMinute)
+                }
+                calendar.set(Calendar.SECOND, 0)
+                setAlarm(calendar.timeInMillis)
+                myData.removeSaves()
             }
-            calendar.set(Calendar.SECOND, 0)
+            else{
+                Toast.makeText(this, "You must buy it to continue using it!", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, PayBuyActivity::class.java)
+                startActivity(intent)
+            }
 
-            setAlarm(calendar.timeInMillis)
         }
 
-        stopButton.setOnClickListener {
+        binding.stopButton.setOnClickListener {
             stopAlarm()
             Toast.makeText(this, "Alarm stopped!", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.topApp.iconBuy.setOnClickListener {
+            val intent = Intent(this, PayBuyActivity::class.java)
+            startActivity(intent)
+        }
+        binding.topApp.iconInfo.setOnClickListener {
+            showInfoDialog()
+        }
+
+
+    }
+
+
+    private fun funUI() {
+        if (myData.isPremiumSaves == true){
+            binding.setAlarmButton.visibility = View.VISIBLE
+            binding.stopButton.visibility = View.VISIBLE
+
+        }else{
+            if ((myData.getSaves() > 0)) {
+                binding.setAlarmButton.visibility = View.VISIBLE
+                binding.stopButton.visibility = View.VISIBLE
+
+            } else {
+                binding.setAlarmButton.visibility = View.GONE
+                binding.stopButton.visibility = View.GONE
+            }
         }
     }
 
@@ -60,4 +114,24 @@ class MainActivity : AppCompatActivity() {
         val pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)
         sendBroadcast(intent)
     }
+
+    // Show dialog cho dữ liệu SharePreferences
+    private fun showInfoDialog() {
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Infor")
+            .setPositiveButton("Cancel") { dialog, _ -> dialog.dismiss() }
+            .create()
+        if (myData.isPremiumSaves == true){
+            dialog.setMessage("You have successfully registered")
+        }else{
+            dialog.setMessage("You have ${myData.getSaves()}")
+        }
+        dialog.show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        funUI()
+    }
+
 }
